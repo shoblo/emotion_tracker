@@ -2,6 +2,8 @@
 
 ## Architecture
 
+
+
 ```
  Phone / laptop (PWA, Vercel)                 Supabase (Sydney)
  ┌──────────────────────────┐   login (JWT)   ┌─────────────────────────────┐
