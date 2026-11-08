@@ -20,7 +20,7 @@ async function readError(error: unknown): Promise<string> {
 
 /** Sends the (edited) text to the analyze-entry Edge Function and returns validated results. */
 export async function analyzeText(text: string, language: ReportLanguage): Promise<Analysis> {
-  const { data, error } = await supabase.functions.invoke("analyze-entry", {
+  const { data, error } = await supabase.functions.invoke("super-api", {
     body: { text, language },
   });
   if (error) throw new Error(await readError(error));
