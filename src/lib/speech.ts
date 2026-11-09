@@ -34,6 +34,34 @@ function join(a: string, b: string): string {
   return a && b ? `${a} ${b}` : a || b;
 }
 
+const CJK = /[㐀-鿿＀-￯]/;
+
+/**
+ * Turns the recogniser's result list into one clean string.
+ * Android Chrome reports every interim guess ("Aaron", "Aaron cradle", "Aaron cradle today")
+ * as a separate NON-final entry, so naively joining them repeats the text. When a non-final entry
+ * is simply extended by the next one, the newer entry replaces it.
+ */
+export function assembleTranscript(parts: Array<{ text: string; isFinal: boolean }>): string {
+  const out: Array<{ text: string; isFinal: boolean }> = [];
+  for (const p of parts) {
+    const t = p.text.trim();
+    if (!t) continue;
+    const last = out[out.length - 1];
+    if (last && !last.isFinal && t.startsWith(last.text)) {
+      out[out.length - 1] = { text: t, isFinal: p.isFinal };
+    } else {
+      out.push({ text: t, isFinal: p.isFinal });
+    }
+  }
+  let acc = "";
+  for (const o of out) {
+    const noSpace = acc === "" || CJK.test(acc[acc.length - 1]) || CJK.test(o.text[0]);
+    acc += (noSpace ? "" : " ") + o.text;
+  }
+  return acc;
+}
+
 export function startListening(opts: Options): Listener {
   const Ctor = getCtor();
   if (!Ctor) {
@@ -53,14 +81,17 @@ export function startListening(opts: Options): Listener {
     current = rec;
     rec.lang = opts.lang;
     rec.continuous = true;
-    rec.interimResults = true;
+    // Final results only: text appears after each pause, but phones can't produce the repeats.
+    rec.interimResults = false;
     const startedAt = Date.now();
 
     rec.onresult = (e: any) => {
       // Rebuild from ALL results each time: more robust than appending (avoids duplicated phrases).
-      let run = "";
-      for (let i = 0; i < e.results.length; i++) run += e.results[i][0].transcript;
-      latest = join(committed, run.trim());
+      const parts: Array<{ text: string; isFinal: boolean }> = [];
+      for (let i = 0; i < e.results.length; i++) {
+        parts.push({ text: String(e.results[i][0].transcript ?? ""), isFinal: e.results[i].isFinal === true });
+      }
+      latest = join(committed, assembleTranscript(parts));
       opts.onText(latest);
     };
 
