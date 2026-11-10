@@ -23,6 +23,10 @@ export default function Record({ onAnalyzed, onOpenExisting }: Props) {
   const [existing, setExisting] = useState<EntryDraft | null>(null);
   const [append, setAppend] = useState(true);
 
+  // Add ?debug=1 to the site address to see the raw speech-recognition results on screen.
+  const debugOn = useRef(new URLSearchParams(window.location.search).has("debug")).current;
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
   const listenerRef = useRef<Listener | null>(null);
   const baseRef = useRef("");
 
@@ -58,6 +62,7 @@ export default function Record({ onAnalyzed, onOpenExisting }: Props) {
       onText: (spoken) => setText(baseRef.current ? `${baseRef.current}\n${spoken}` : spoken),
       onError: (msg) => setError(msg),
       onStop: () => setListening(false),
+      onDebug: debugOn ? (line) => setDebugLog((prev) => [...prev.slice(-9), line]) : undefined,
     });
   }
 
@@ -182,6 +187,12 @@ export default function Record({ onAnalyzed, onOpenExisting }: Props) {
           className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-base"
         />
       </label>
+
+      {debugOn && (
+        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-green-300">
+          {debugLog.length ? debugLog.join("\n") : "Debug: raw speech results will appear here."}
+        </pre>
+      )}
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
