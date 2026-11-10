@@ -28,6 +28,8 @@ interface Options {
   onError: (message: string) => void;
   /** Called once, when listening has really ended. */
   onStop: () => void;
+  /** Optional: receives the raw recogniser results, for troubleshooting on a real phone (?debug=1). */
+  onDebug?: (line: string) => void;
 }
 
 function join(a: string, b: string): string {
@@ -38,9 +40,10 @@ const CJK = /[㐀-鿿＀-￯]/;
 
 /**
  * Turns the recogniser's result list into one clean string.
- * Android Chrome reports every interim guess ("Aaron", "Aaron cradle", "Aaron cradle today")
- * as a separate NON-final entry, so naively joining them repeats the text. When a non-final entry
- * is simply extended by the next one, the newer entry replaces it.
+ * Desktop browsers give one entry per phrase. Android Chrome instead tends to give CUMULATIVE
+ * entries ("Aaron", "Aaron cradle", "Aaron cradle today"), and they may even be marked final,
+ * so naively joining them repeats the text. When an entry simply extends (or repeats) the
+ * previous one, the newer entry replaces it, whether or not it is marked final.
  */
 export function assembleTranscript(parts: Array<{ text: string; isFinal: boolean }>): string {
   const out: Array<{ text: string; isFinal: boolean }> = [];
@@ -48,7 +51,7 @@ export function assembleTranscript(parts: Array<{ text: string; isFinal: boolean
     const t = p.text.trim();
     if (!t) continue;
     const last = out[out.length - 1];
-    if (last && !last.isFinal && t.startsWith(last.text)) {
+    if (last && t.startsWith(last.text)) {
       out[out.length - 1] = { text: t, isFinal: p.isFinal };
     } else {
       out.push({ text: t, isFinal: p.isFinal });
@@ -91,6 +94,7 @@ export function startListening(opts: Options): Listener {
       for (let i = 0; i < e.results.length; i++) {
         parts.push({ text: String(e.results[i][0].transcript ?? ""), isFinal: e.results[i].isFinal === true });
       }
+      opts.onDebug?.(`${parts.length} result(s): ` + parts.map((p) => `${p.isFinal ? "F" : "i"}:${p.text}`).join(" | "));
       latest = join(committed, assembleTranscript(parts));
       opts.onText(latest);
     };
