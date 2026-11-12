@@ -3,7 +3,7 @@ import MoodFace from "../components/MoodFace";
 import { parseTriggerInput } from "../lib/analysis";
 import { formatDate } from "../lib/dates";
 import { saveEntry } from "../lib/entries";
-import { computeMood, MOOD_LABEL } from "../lib/moodRules";
+import { computeMood, MOOD_COLOR, MOOD_LABEL } from "../lib/moodRules";
 import type { EntryDraft, Mood } from "../lib/types";
 
 interface Props {
@@ -16,14 +16,9 @@ interface Props {
 
 function Switch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm">
-      <span className="text-base font-medium">{label}</span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-6 w-6"
-      />
+    <label className="toggle">
+      <span>{label}</span>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
     </label>
   );
 }
@@ -72,15 +67,11 @@ export default function Review({ draft, replacesExisting, onSaved, onBack }: Pro
 
   if (saved) {
     return (
-      <div className="flex flex-col items-center gap-4 py-10 text-center">
+      <div className="card result">
         <MoodFace mood={effective} size={140} />
-        <p className="text-xl font-semibold">Saved</p>
-        <p className="text-slate-600">{formatDate(f.entry_date)}</p>
-        <button
-          type="button"
-          onClick={onSaved}
-          className="mt-4 rounded-xl bg-slate-900 px-8 py-3 text-base font-semibold text-white"
-        >
+        <p className="result-title">Saved!</p>
+        <p className="hint">{formatDate(f.entry_date)}</p>
+        <button type="button" onClick={onSaved} className="btn btn--blue">
           Done
         </button>
       </div>
@@ -88,121 +79,113 @@ export default function Review({ draft, replacesExisting, onSaved, onBack }: Pro
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <p className="text-sm text-slate-600">{formatDate(f.entry_date)}</p>
+    <div className="stack">
+      <div className="card result">
+        <p className="hint">{formatDate(f.entry_date)}</p>
         <MoodFace mood={effective} size={130} />
-        <p className="text-lg font-semibold">{MOOD_LABEL[effective]}</p>
+        <p className="result-title">{MOOD_LABEL[effective]}</p>
         {override !== null && override !== computed && (
-          <p className="text-xs text-slate-500">Colour changed by hand (the automatic colour would be {computed}).</p>
+          <p className="hint">Colour changed by hand (the automatic colour would be {computed}).</p>
         )}
       </div>
 
       {replacesExisting && (
-        <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
-          Saving will replace the entry already saved for this date.
-        </p>
+        <p className="note note--warn">Saving will replace the entry already saved for this date.</p>
       )}
 
-      <div className="space-y-2">
+      <div className="card stack">
         <Switch label="Picked up early from school" checked={f.picked_up_early} onChange={setPickedUp} />
         <Switch label="Upset / incident at school" checked={f.had_incident} onChange={(v) => set("had_incident", v)} />
         <Switch label="Big meltdown" checked={f.had_meltdown} onChange={setMeltdown} />
+
+        <label className="label">
+          Summary (English)
+          <textarea
+            value={f.summary_en}
+            onChange={(e) => set("summary_en", e.target.value)}
+            rows={3}
+            className="textarea"
+          />
+        </label>
+
+        <label className="label">
+          What happened (English)
+          <textarea
+            value={f.incident_details_en}
+            onChange={(e) => set("incident_details_en", e.target.value)}
+            rows={3}
+            className="textarea"
+          />
+        </label>
+
+        <label className="label">
+          Possible triggers (comma separated)
+          <input
+            value={triggersText}
+            onChange={(e) => setTriggersText(e.target.value)}
+            placeholder="noise, lunch time, transitions"
+            className="input"
+          />
+        </label>
+
+        <label className="label">
+          Teacher feedback (English)
+          <textarea
+            value={f.teacher_feedback_en}
+            onChange={(e) => set("teacher_feedback_en", e.target.value)}
+            rows={3}
+            className="textarea"
+          />
+        </label>
+
+        <label className="label">
+          Full report in English (the teacher can read this)
+          <textarea
+            value={f.transcript_en}
+            onChange={(e) => set("transcript_en", e.target.value)}
+            rows={5}
+            className="textarea"
+          />
+        </label>
+
+        <details className="details">
+          <summary>Original text (only you can see this)</summary>
+          <p>{f.transcript_original}</p>
+        </details>
       </div>
 
-      <label className="block text-sm font-medium">
-        Summary (English)
-        <textarea
-          value={f.summary_en}
-          onChange={(e) => set("summary_en", e.target.value)}
-          rows={3}
-          className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-base"
-        />
-      </label>
-
-      <label className="block text-sm font-medium">
-        What happened (English)
-        <textarea
-          value={f.incident_details_en}
-          onChange={(e) => set("incident_details_en", e.target.value)}
-          rows={3}
-          className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-base"
-        />
-      </label>
-
-      <label className="block text-sm font-medium">
-        Possible triggers (comma separated)
-        <input
-          value={triggersText}
-          onChange={(e) => setTriggersText(e.target.value)}
-          placeholder="noise, lunch time, transitions"
-          className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 text-base"
-        />
-      </label>
-
-      <label className="block text-sm font-medium">
-        Teacher feedback (English)
-        <textarea
-          value={f.teacher_feedback_en}
-          onChange={(e) => set("teacher_feedback_en", e.target.value)}
-          rows={3}
-          className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-base"
-        />
-      </label>
-
-      <label className="block text-sm font-medium">
-        Full report in English (the teacher can read this)
-        <textarea
-          value={f.transcript_en}
-          onChange={(e) => set("transcript_en", e.target.value)}
-          rows={5}
-          className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-base"
-        />
-      </label>
-
-      <details className="rounded-xl bg-white p-3 text-sm shadow-sm">
-        <summary className="cursor-pointer font-medium">Original text (only you can see this)</summary>
-        <p className="mt-2 whitespace-pre-wrap text-slate-700">{f.transcript_original}</p>
-      </details>
-
-      <div>
-        <p className="mb-2 text-sm font-medium">Colour</p>
-        <div className="grid grid-cols-3 gap-2">
+      <div className="card">
+        <p className="label">Colour</p>
+        <div className="moods">
           {MOODS.map((m) => (
             <button
               key={m}
               type="button"
+              aria-pressed={effective === m}
               onClick={() => setOverride(m === computed ? null : m)}
-              className={`rounded-xl border-2 py-3 text-sm font-semibold capitalize ${
-                effective === m ? "border-slate-900 bg-slate-100" : "border-slate-200 bg-white"
-              }`}
+              className="mood-btn"
             >
+              <span className="dot" style={{ background: MOOD_COLOR[m] }} />
               {m}
             </button>
           ))}
         </div>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="hint" style={{ marginTop: 10 }}>
           Automatic: red if picked up early, yellow if there was an incident, otherwise green. Tap a colour to override.
         </p>
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="note note--err" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={saving}
-          className="rounded-xl border border-slate-300 bg-white py-4 text-base font-semibold"
-        >
+      <div className="btns">
+        <button type="button" onClick={onBack} disabled={saving} className="btn btn--ghost">
           Back
         </button>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="rounded-xl bg-emerald-600 py-4 text-base font-semibold text-white disabled:opacity-50"
-        >
+        <button type="button" onClick={save} disabled={saving} className="btn btn--green">
           {saving ? "Saving…" : "Save"}
         </button>
       </div>

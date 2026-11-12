@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
+import Scene from "./components/Scene";
 import { configError, supabase } from "./lib/supabase";
 import type { EntryDraft, Role } from "./lib/types";
 import Login from "./pages/Login";
@@ -12,22 +13,29 @@ type Screen =
 
 function Shell({ children, onSignOut }: { children: ReactNode; onSignOut?: () => void }) {
   return (
-    <div className="mx-auto min-h-screen max-w-md px-4 pb-10 pt-4">
-      <header className="mb-5 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Daily Check-in</h1>
-        {onSignOut && (
-          <button type="button" onClick={onSignOut} className="text-sm font-medium text-slate-600 underline">
-            Sign out
-          </button>
-        )}
-      </header>
-      {children}
-    </div>
+    <>
+      <Scene />
+      <div className="page">
+        <div className="topbar">
+          {onSignOut && (
+            <button type="button" onClick={onSignOut} className="pill-link">
+              Sign out
+            </button>
+          )}
+        </div>
+        <div className="sign-wrap">
+          <h1 className="sign">
+            Daily Check-in <span className="heart" aria-hidden="true">♥</span>
+          </h1>
+        </div>
+        {children}
+      </div>
+    </>
   );
 }
 
 function Notice({ children }: { children: ReactNode }) {
-  return <div className="rounded-2xl bg-white p-5 text-slate-700 shadow">{children}</div>;
+  return <div className="card lead">{children}</div>;
 }
 
 export default function App() {
@@ -90,7 +98,7 @@ export default function App() {
   if (!ready) {
     return (
       <Shell>
-        <p className="text-slate-500">Loading…</p>
+        <Notice>Loading…</Notice>
       </Shell>
     );
   }
@@ -104,7 +112,7 @@ export default function App() {
   if (!roleLoaded) {
     return (
       <Shell onSignOut={signOut}>
-        <p className="text-slate-500">Loading…</p>
+        <Notice>Loading…</Notice>
       </Shell>
     );
   }
