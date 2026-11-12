@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
+import Pets from "../components/Pets";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,39 +18,41 @@ export default function Login() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow">
-      <h1 className="text-2xl font-bold">Daily Check-in</h1>
-      <p className="text-sm text-slate-600">Sign in with the email and password you were given.</p>
-      <label className="block text-sm font-medium">
-        Email
-        <input
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Password
-        <input
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 text-base"
-        />
-      </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full rounded-xl bg-slate-900 py-3 text-base font-semibold text-white disabled:opacity-50"
-      >
-        {busy ? "Signing in…" : "Sign in"}
-      </button>
-    </form>
+    <>
+      <Pets className="pets pets--perch bob" />
+      <form onSubmit={submit} className="card card--wood stack">
+        <p className="lead">Sign in with the email and password you were given.</p>
+        <label className="label">
+          Email
+          <input
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input"
+          />
+        </label>
+        <label className="label">
+          Password
+          <input
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input"
+          />
+        </label>
+        {error && (
+          <p className="note note--err" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={busy} className="btn btn--blue">
+          {busy ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+    </>
   );
 }

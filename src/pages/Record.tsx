@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Pets from "../components/Pets";
 import { analyzeText, type ReportLanguage } from "../lib/analyze";
 import { formatDate, todayLocal } from "../lib/dates";
 import { loadEntry } from "../lib/entries";
@@ -11,6 +12,25 @@ interface Props {
   onAnalyzed: (draft: EntryDraft, replaces: boolean) => void;
   /** Open the already-saved entry for the date without re-analysing. */
   onOpenExisting: (draft: EntryDraft) => void;
+}
+
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3" />
+      <path d="M9 21h6" />
+    </svg>
+  );
+}
+
+function StopIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
+      <rect x="6" y="6" width="12" height="12" rx="3" fill="currentColor" />
+    </svg>
+  );
 }
 
 export default function Record({ onAnalyzed, onOpenExisting }: Props) {
@@ -98,112 +118,95 @@ export default function Record({ onAnalyzed, onOpenExisting }: Props) {
   const supported = speechSupported();
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
-        <label className="text-sm font-medium">
-          Date
-          <input
-            type="date"
-            value={date}
-            max={todayLocal()}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-base"
+    <>
+      <div className="card stack">
+        <div className="row">
+          <label className="label">
+            📅 Date
+            <input
+              type="date"
+              value={date}
+              max={todayLocal()}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              className="input input--inline"
+            />
+          </label>
+          <div className="seg" role="group" aria-label="Language you will speak">
+            <button type="button" onClick={() => setLang("zh")} disabled={listening} aria-pressed={lang === "zh"}>
+              中文
+            </button>
+            <button type="button" onClick={() => setLang("en")} disabled={listening} aria-pressed={lang === "en"}>
+              English
+            </button>
+          </div>
+        </div>
+
+        {existing && (
+          <div className="note note--warn">
+            <strong>An entry for {formatDate(date)} is already saved.</strong>
+            <label>
+              <input type="checkbox" checked={append} onChange={(e) => setAppend(e.target.checked)} />
+              <span>Add what I say now to the saved report (untick to replace it).</span>
+            </label>
+            <button type="button" onClick={() => onOpenExisting(existing)} className="linkbtn">
+              Open the saved entry
+            </button>
+          </div>
+        )}
+
+        <div className="mic-wrap">
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={!supported || busy}
+            aria-pressed={listening}
+            aria-label={listening ? "Stop recording" : "Start recording"}
+            className={`mic${listening ? " mic--on" : ""}`}
+          >
+            {listening ? <StopIcon /> : <MicIcon />}
+          </button>
+          <p className="hint">
+            {listening
+              ? "Listening… tap to stop"
+              : supported
+                ? "Tap to speak about today"
+                : "Voice input isn't available in this browser. Type below, or use your keyboard's microphone."}
+          </p>
+        </div>
+
+        <label className="label">
+          💬 What happened today? (you can edit the text)
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+            placeholder={
+              lang === "zh"
+                ? "例如：今天老师说他上午很开心，但是午饭后哭了，没有被接回家。"
+                : "e.g. The teacher said he had a good morning but cried after lunch. He stayed all day."
+            }
+            className="textarea"
           />
         </label>
-        <div className="flex overflow-hidden rounded-lg border border-slate-300 text-sm font-medium">
-          <button
-            type="button"
-            onClick={() => setLang("zh")}
-            disabled={listening}
-            className={`px-4 py-2 ${lang === "zh" ? "bg-slate-900 text-white" : "bg-white"}`}
-          >
-            中文
-          </button>
-          <button
-            type="button"
-            onClick={() => setLang("en")}
-            disabled={listening}
-            className={`px-4 py-2 ${lang === "en" ? "bg-slate-900 text-white" : "bg-white"}`}
-          >
-            English
-          </button>
-        </div>
-      </div>
 
-      {existing && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
-          <p className="font-medium">An entry for {formatDate(date)} is already saved.</p>
-          <label className="mt-2 flex items-start gap-2">
-            <input
-              type="checkbox"
-              checked={append}
-              onChange={(e) => setAppend(e.target.checked)}
-              className="mt-1 h-4 w-4"
-            />
-            <span>Add what I say now to the saved report (untick to replace it).</span>
-          </label>
-          <button
-            type="button"
-            onClick={() => onOpenExisting(existing)}
-            className="mt-2 text-sm font-semibold underline"
-          >
-            Open the saved entry
-          </button>
-        </div>
-      )}
+        {debugOn && (
+          <pre className="debug">
+            {debugLog.length ? debugLog.join("\n") : "Debug: raw speech results will appear here."}
+          </pre>
+        )}
 
-      <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={toggleListening}
-          disabled={!supported || busy}
-          aria-pressed={listening}
-          className={`flex h-28 w-28 items-center justify-center rounded-full text-5xl text-white shadow-lg transition disabled:opacity-40 ${
-            listening ? "animate-pulse bg-red-600" : "bg-slate-900"
-          }`}
-        >
-          {listening ? "■" : "🎤"}
+        {error && (
+          <p className="note note--err" role="alert">
+            {error}
+          </p>
+        )}
+
+        <button type="button" onClick={analyse} disabled={!text.trim() || busy} className="btn btn--green">
+          {busy ? "Analysing…" : "Analyse"}
         </button>
-        <p className="text-sm text-slate-600">
-          {listening
-            ? "Listening… tap to stop"
-            : supported
-              ? "Tap to speak about today"
-              : "Voice input isn't available in this browser. Type below, or use your keyboard's microphone."}
-        </p>
       </div>
 
-      <label className="block text-sm font-medium">
-        What happened today? (you can edit the text)
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={7}
-          placeholder={
-            lang === "zh"
-              ? "例如：今天老师说他上午很开心，但是午饭后哭了，没有被接回家。"
-              : "e.g. The teacher said he had a good morning but cried after lunch. He stayed all day."
-          }
-          className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-base"
-        />
-      </label>
-
-      {debugOn && (
-        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 text-xs text-green-300">
-          {debugLog.length ? debugLog.join("\n") : "Debug: raw speech results will appear here."}
-        </pre>
-      )}
-
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-
-      <button
-        type="button"
-        onClick={analyse}
-        disabled={!text.trim() || busy}
-        className="w-full rounded-xl bg-emerald-600 py-4 text-lg font-semibold text-white disabled:opacity-40"
-      >
-        {busy ? "Analysing…" : "Analyse"}
-      </button>
-    </div>
+      <Pets className="pets pets--bottom bob" />
+    </>
   );
 }
